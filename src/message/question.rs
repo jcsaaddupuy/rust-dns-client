@@ -2,9 +2,11 @@ use crate::rr::{record_class::Class, record_type::RecordType};
 use bitvec::prelude::*;
 
 use log::debug;
+use nom::{combinator::map_res, number::complete::be_u16, IResult};
 
-/// RFC 1035 defines DNS headers as 12 bytes long.
-const MAX_LABEL_BYTES: usize = 12;
+use super::parser::{take_nibble, take_u16, BitInput};
+
+const MAX_LABEL_BYTES: usize = 64;
 
 #[derive(Debug, Clone)]
 pub struct Question<'a> {
@@ -50,6 +52,49 @@ impl<'a> Question<'a> {
 
         Ok(bv)
     }
+
+    pub fn deserialize(i: BitInput<'a>) -> IResult<(&'a [u8], usize), Self> {
+        let (i, labels) = Self::parse_labels_then_zero(i).unwrap();
+
+        let (i, record_type) = map_res(take_nibble, RecordType::try_from)(i).unwrap();
+        let (i, record_qclass) = map_res(take_nibble, Class::try_from)(i).unwrap();
+
+        Ok((
+            i,
+            Self {
+                labels,
+                record_type,
+                record_qclass,
+            },
+        ))
+    }
+    pub fn parse_labels_then_zero(i: BitInput<'a>) -> IResult<(&'a [u8], usize), Vec<&'a str>> {
+        let mut labels = Vec::new();
+        let mut ix = i.0;
+        loop {
+            let (i, label) = Self::parse_label(ix).unwrap();
+            ix = i;
+            debug!("Found label {}", label);
+            let len = label.len();
+            labels.push(label);
+            if len == 0 {
+                return Ok(((i, i.len()), labels));
+            }
+        }
+    }
+    pub fn parse_label(i: &'a [u8]) -> IResult<&'a [u8], &'a str> {
+        let parse_len = map_res(nom::number::complete::be_u8, |num| {
+            if num >= 64 {
+                Err(format!(
+                    "DNS name labels must be <=63 bytes but this one is {num}"
+                ))
+            } else {
+                Ok(num)
+            }
+        });
+        let parse_label = nom::multi::length_data(parse_len);
+        map_res(parse_label, |bytes: &[u8]| std::str::from_utf8(bytes))(i)
+    }
 }
 
 #[cfg(test)]
@@ -68,22 +113,22 @@ mod tests_question {
 
         //
         expected.extend_from_bitslice(("google".len() as u8).view_bits::<Msb0>());
-        expected.extend_from_bitslice(('g' as u8).view_bits::<Msb0>()); 
-        expected.extend_from_bitslice(('o' as u8).view_bits::<Msb0>()); 
-        expected.extend_from_bitslice(('o' as u8).view_bits::<Msb0>()); 
-        expected.extend_from_bitslice(('g' as u8).view_bits::<Msb0>()); 
-        expected.extend_from_bitslice(('l' as u8).view_bits::<Msb0>()); 
-        expected.extend_from_bitslice(('e' as u8).view_bits::<Msb0>()); 
+        expected.extend_from_bitslice(('g' as u8).view_bits::<Msb0>());
+        expected.extend_from_bitslice(('o' as u8).view_bits::<Msb0>());
+        expected.extend_from_bitslice(('o' as u8).view_bits::<Msb0>());
+        expected.extend_from_bitslice(('g' as u8).view_bits::<Msb0>());
+        expected.extend_from_bitslice(('l' as u8).view_bits::<Msb0>());
+        expected.extend_from_bitslice(('e' as u8).view_bits::<Msb0>());
 
         //
         expected.extend_from_bitslice(("com".len() as u8).view_bits::<Msb0>());
-        expected.extend_from_bitslice(('c' as u8).view_bits::<Msb0>()); 
-        expected.extend_from_bitslice(('o' as u8).view_bits::<Msb0>()); 
-        expected.extend_from_bitslice(('m' as u8).view_bits::<Msb0>()); 
+        expected.extend_from_bitslice(('c' as u8).view_bits::<Msb0>());
+        expected.extend_from_bitslice(('o' as u8).view_bits::<Msb0>());
+        expected.extend_from_bitslice(('m' as u8).view_bits::<Msb0>());
 
         //
-        expected.extend_from_bitslice((1 as u16).view_bits::<Msb0>()); 
-        expected.extend_from_bitslice((1 as u16).view_bits::<Msb0>()); 
+        expected.extend_from_bitslice((1 as u16).view_bits::<Msb0>());
+        expected.extend_from_bitslice((1 as u16).view_bits::<Msb0>());
 
         assert_eq!(bitvec, expected);
     }

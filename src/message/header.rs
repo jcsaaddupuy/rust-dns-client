@@ -90,10 +90,11 @@ impl<'a> MessageHeader {
 impl MessageHeader {
     pub fn deserialize(i: BitInput) -> IResult<(&[u8], usize), Self> {
         use nom::combinator::map_res;
-        let (i, id) = take_u16(i).unwrap();
-        let (i, qr) = take_bit(i).unwrap();
+        
+        let (i, id) = take_u16(i).expect("id");
+        let (i, qr) = take_bit(i).expect("qr");
 
-        let (i, opcode) = map_res(take_nibble, Opcode::try_from)(i).unwrap();
+        let (i, opcode) = map_res(take_nibble, Opcode::try_from)(i).expect("opcode");
         let (i, aa) = take_bit(i).unwrap();
         let (i, tc) = take_bit(i).unwrap();
         let (i, rd) = take_bit(i).unwrap();
@@ -178,8 +179,25 @@ mod tests_header {
         expected.extend_from_bitslice((0 as u16).view_bits::<Msb0>());
         expected.extend_from_bitslice((0 as u16).view_bits::<Msb0>());
 
-
         // assert_eq!(expected.len(), 8 * EXPECTED_HEADER_SIZE);
         assert_eq!(bv, expected);
+    }
+
+    #[test]
+    fn test_bitvec_x() {
+        // let mut bitvec: BitVec<usize, Msb0> = BitVec::new();
+        // bitvec.extend_from_bitslice((1 as u16).view_bits::<Msb0>());
+
+        // let res: u16 = bitvec[0..16].load();
+        // assert_eq!(1, res);
+
+        let buffer_u8: &[u8] = &[16, 0, 1];
+        // let bvu_ = bitvec![u8, Msb0;0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+
+        let buffer_u16 = buffer_u8.into_iter().map(|x| u16::from(*x));
+        let bitvec: BitVec<u16, Msb0> = BitVec::from_iter(buffer_u16);
+        assert_eq!(16, bitvec[0..16].load::<u16>());
+        assert_eq!(0, bitvec[16..32].load::<u16>());
+        assert_eq!(1, bitvec[32..(32 + 16)].load::<u16>());
     }
 }

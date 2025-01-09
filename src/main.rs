@@ -15,12 +15,13 @@ async fn main() -> Result<(), std::io::Error> {
     println!("Hello, world!");
     colog::init();
 
-    // let resolver = "8.8.8.8:53";
-    let resolver = "127.0.0.1:1053";
+    let resolver = "8.8.8.8:53";
+    // let resolver = "127.0.0.1:1053";
 
-    let query_id = rand::thread_rng().gen::<u16>();
-    // let query_id = 1;
-    let message: Message = Message::new(query_id, "google.com", RecordType::A, Class::IN)
+    // let query_id = rand::thread_rng().gen::<u16>();
+    let query_id = 42;
+    info!("Query id : {:?}", query_id);
+    let message: Message = Message::new(query_id, "google.com.", RecordType::A, Class::IN)
         .expect("Could not build message");
     let local_addr = "0.0.0.0:0";
     let socket = UdpSocket::bind(local_addr)
@@ -37,7 +38,6 @@ async fn main() -> Result<(), std::io::Error> {
 
     info!("bytes to send : {}", hex::encode(body.as_bytes()));
 
-    // return Ok(());
     let bytes_sent = socket.send(&body).await.expect("couldn't send data");
     if bytes_sent != body.len() {
         panic!("Only {bytes_sent} bytes, message was probably truncated");
@@ -46,18 +46,9 @@ async fn main() -> Result<(), std::io::Error> {
     let mut response_buf = vec![0; message::message::MAX_UDP_BYTES];
     match socket.recv(&mut response_buf).await {
         Ok(received) => {
-            let value = response_buf[..received].to_vec();
+            let i = Message::deserialize((&response_buf, received)).unwrap();
 
-            let result = MessageHeader::try_from(value);
-
-            match result {
-                Ok(header) => {
-                    info!("header : {:?}", header)
-                }
-                Err(e) => {
-                    error!("{}", e);
-                }
-            }
+            info!("received {:?}", i.1);
         }
         Err(e) => return Err(e),
     }

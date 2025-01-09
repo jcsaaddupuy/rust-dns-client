@@ -23,6 +23,15 @@ impl TryFrom<u16> for Class {
     }
 }
 
+impl TryFrom<u8> for Class {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        return Self::try_from(value as u16);
+    }
+}
+
+
 impl<'a> From<Class> for &'a u16 {
     fn from(val: Class) -> Self {
         let type_num = match val {

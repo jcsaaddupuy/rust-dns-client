@@ -79,6 +79,14 @@ impl TryFrom<u16> for RecordType {
     }
 }
 
+impl TryFrom<u8> for RecordType {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        return Self::try_from(value as u16);
+    }
+}
+
 impl<'a> From<RecordType> for &'a u16 {
     fn from(val: RecordType) -> Self {
         let type_num = match val {
