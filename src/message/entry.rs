@@ -80,8 +80,8 @@ mod tests_entry {
         expected.extend_from_bitslice(('m' as u8).view_bits::<Msb0>()); // m
 
         //
-        expected.extend_from_bitslice(RecordType::A.as_bitslice());
-        expected.extend_from_bitslice(Class::IN.as_bitslice());
+        expected.extend_from_bitslice((1 as u16).view_bits::<Msb0>()); //P TYPE A
+        expected.extend_from_bitslice((1 as u16).view_bits::<Msb0>()); // CLASS IN
 
         assert_eq!(bitvec, expected);
     }
