@@ -1,11 +1,11 @@
-use bitvec::{order::Msb0, slice::BitSlice, view::BitView};
+use bitvec::{order::Msb0, slice::BitSlice, vec::BitVec, view::BitView};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Class {
-    IN, //1 the Internet
-    CS, //2 the CSNET class (Obsolete - used only for examples in some obsolete RFCs)
-    CH, //3 the CHAOS class
-    HS, //4 Hesiod [Dyer 87]
+    IN = 1, //1 the Internet
+    CS,     //2 the CSNET class (Obsolete - used only for examples in some obsolete RFCs)
+    CH,     //3 the CHAOS class
+    HS,     //4 Hesiod [Dyer 87]
 }
 
 impl TryFrom<u16> for Class {
@@ -40,7 +40,6 @@ impl From<Class> for u16 {
         *type_num
     }
 }
-
 
 impl<'a> Class {
     pub fn as_bitslice(self) -> &'a BitSlice<u16, Msb0> {

@@ -83,7 +83,6 @@ impl<'a> MessageHeader {
         bv.extend_from_bitslice(self.name_server_count.view_bits::<Msb0>());
         bv.extend_from_bitslice(self.additional_records_count.view_bits::<Msb0>());
         // assert_eq!(bv.len(), 8 * EXPECTED_HEADER_SIZE);
-
         bv
     }
 }

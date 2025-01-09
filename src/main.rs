@@ -15,7 +15,8 @@ async fn main() -> Result<(), std::io::Error> {
     println!("Hello, world!");
     colog::init();
 
-    let resolver = "8.8.8.8:53";
+    // let resolver = "8.8.8.8:53";
+    let resolver = "127.0.0.1:1053";
 
     let query_id = rand::thread_rng().gen::<u16>();
     // let query_id = 1;
@@ -32,7 +33,7 @@ async fn main() -> Result<(), std::io::Error> {
         .expect("couldn't connect to the DNS resolver");
 
     // Send the DNS resolver the message
-    let body: Vec<u8> = message.into();
+    let body: Vec<u8> = message.as_vec();
 
     info!("bytes to send : {}", hex::encode(body.as_bytes()));
 

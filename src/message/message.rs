@@ -16,7 +16,7 @@ const MAX_LABEL_BYTES: usize = 63;
 /// names           255 octets or less
 const MAX_NAME_BYTES: usize = 255;
 
-use super::{entry::Entry, header::MessageHeader};
+use super::{header::MessageHeader, question::Question};
 
 pub struct Record {
     pub name: String,
@@ -33,7 +33,7 @@ pub struct Message<'a> {
     // The question section contains fields that describe a
     // question to a name server.  These fields are a query type (QTYPE), a
     // query class (QCLASS), and a query domain name (QNAME).
-    pub question: Vec<Entry<'a>>,
+    pub question: Vec<Question<'a>>,
 }
 
 impl<'a> Message<'a> {
@@ -59,47 +59,34 @@ impl<'a> Message<'a> {
 
         let ret = Message {
             header: MessageHeader::new(id),
-            question: vec![Entry::new(labels, record_type, record_class)],
+            question: vec![Question::new(labels, record_type, record_class)],
         };
         Ok(ret)
     }
-}
 
-impl<'a> TryInto<BitVec<usize, Msb0>> for Message<'a> {
-    type Error = std::io::Error;
-
-    fn try_into(self) -> Result<BitVec<usize, Msb0>, Self::Error> {
+    pub fn as_bitvec(self) -> Result<BitVec<usize, Msb0>, std::io::Error> {
         let mut bv = BitVec::<usize, Msb0>::new();
 
         bv.extend_from_bitslice(self.header.as_bitvec().as_bitslice());
 
-        debug!("Serializing Questions");
         for q in self.question {
-            debug!("Serializing entry {:?}", q);
-            let res: Result<BitVec<usize, Msb0>, std::io::Error> = q.as_bitvec();
-            match res {
-                Ok(bv_entry) => {
-                    bv.extend_from_bitslice(bv_entry.as_bitslice());
+            debug!("Serializing question {:?}", q);
+            match q.as_bitvec() {
+                Ok(bv_question) => {
+                    bv.extend_from_bitslice(bv_question.as_bitslice());
                 }
                 Err(e) => return Err(e),
             }
         }
+
         Ok(bv)
     }
-}
 
-impl<'a> Into<Vec<u8>> for Message<'a> {
-    fn into(self) -> Vec<u8> {
+    pub fn as_vec(self) -> Vec<u8> {
         debug!("Serializing Message {:?}", self);
-        let mut bv: BitVec<usize, Msb0> = self.try_into().expect("Could not serialize");
+        let mut bv: BitVec<usize, Msb0> = self.as_bitvec().expect("Could not serialize");
         let mut msg_bytes = Vec::with_capacity(MAX_UDP_BYTES);
         bv.read_to_end(&mut msg_bytes).unwrap();
         msg_bytes
     }
 }
-
-// // impl From<Vec<u8>> for Message {
-// //     fn from(value: Vec<u8>) -> Self {
-// //         // let (i, header) = nom::bits::bits(Header::deserialize)(i)?;
-// //     }
-// // }

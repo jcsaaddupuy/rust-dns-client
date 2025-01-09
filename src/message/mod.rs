@@ -1,5 +1,5 @@
 pub mod message;
-pub mod entry;
+pub mod question;
 pub mod header;
 pub mod opcode;
 pub mod response_code;
